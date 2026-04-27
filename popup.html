@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Website Blocker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <h1>Website Blocker</h1>
+      <p class="label">Current page</p>
+      <p id="current-site" class="site">Loading...</p>
+      <p id="question" class="question">Checking website...</p>
+      <button id="add-button" type="button" disabled>Add to blocked list</button>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
