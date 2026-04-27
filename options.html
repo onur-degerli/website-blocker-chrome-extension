@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Website Blocker Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Website Blocker</h1>
+      <p>Add domains to block. Examples: <code>facebook.com</code>, <code>youtube.com</code>.</p>
+
+      <form id="site-form" class="row">
+        <input
+          id="site-input"
+          name="site"
+          type="text"
+          placeholder="Enter website domain"
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+
+      <p id="message" role="status" aria-live="polite"></p>
+
+      <section>
+        <h2>Blocked Websites</h2>
+        <ul id="blocked-list"></ul>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
