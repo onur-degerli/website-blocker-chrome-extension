@@ -9,7 +9,7 @@ let currentHost = null;
 
 function normalizeStoredEntry(value) {
   if (typeof value === "string") {
-    return { host: value, enabled: true };
+    return { host: value, enabled: true, redirectUrl: "" };
   }
 
   if (
@@ -18,7 +18,11 @@ function normalizeStoredEntry(value) {
     typeof value.host === "string" &&
     typeof value.enabled === "boolean"
   ) {
-    return { host: value.host, enabled: value.enabled };
+    return {
+      host: value.host,
+      enabled: value.enabled,
+      redirectUrl: typeof value.redirectUrl === "string" ? value.redirectUrl : ""
+    };
   }
 
   return null;
@@ -102,7 +106,10 @@ addButton.addEventListener("click", async () => {
   const existing = sites.find((entry) => entry.host === currentHost);
 
   if (!existing) {
-    await setBlockedSites([...sites, { host: currentHost, enabled: true }]);
+    await setBlockedSites([
+      ...sites,
+      { host: currentHost, enabled: true, redirectUrl: "" }
+    ]);
     setStatus(`${currentHost} added and blocking enabled.`);
     await refreshView();
     return;

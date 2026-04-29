@@ -65,7 +65,7 @@ button.remove {
 #blocked-list li {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   border: 1px solid #ececf2;
   padding: 10px 12px;
@@ -77,6 +77,7 @@ button.remove {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
 }
 
 .site-label {
@@ -91,6 +92,11 @@ button.remove {
 .site-actions {
   display: flex;
   gap: 8px;
+}
+
+.redirect-input {
+  margin-top: 4px;
+  max-width: 420px;
 }
 
 button.toggle {

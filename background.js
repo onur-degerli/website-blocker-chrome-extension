@@ -16,24 +16,44 @@ function normalizeInputToHostname(input) {
   }
 }
 
-function isBlockedHost(hostname, blockedSites) {
+function normalizeRedirectUrl(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const candidate = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+
+  try {
+    const url = new URL(candidate);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function findBlockedEntry(hostname, blockedSites) {
   const normalizedHost = hostname.replace(/^www\./, "").toLowerCase();
-  return blockedSites.some((entry) => {
+  return blockedSites.find((entry) => {
     if (!entry.enabled) {
-      return false;
+      return null;
     }
 
     if (normalizedHost === entry.host) {
-      return true;
+      return entry;
     }
 
-    return normalizedHost.endsWith(`.${entry.host}`);
+    return normalizedHost.endsWith(`.${entry.host}`) ? entry : null;
   });
 }
 
 function normalizeStoredEntry(value) {
   if (typeof value === "string") {
-    return { host: value, enabled: true };
+    return { host: value, enabled: true, redirectUrl: "" };
   }
 
   if (
@@ -42,7 +62,11 @@ function normalizeStoredEntry(value) {
     typeof value.host === "string" &&
     typeof value.enabled === "boolean"
   ) {
-    return { host: value.host, enabled: value.enabled };
+    return {
+      host: value.host,
+      enabled: value.enabled,
+      redirectUrl: normalizeRedirectUrl(value.redirectUrl)
+    };
   }
 
   return null;
@@ -79,9 +103,12 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     return;
   }
 
-  if (isBlockedHost(hostname, blockedSites)) {
+  const blockedEntry = findBlockedEntry(hostname, blockedSites);
+  if (blockedEntry) {
     const blockedPage = chrome.runtime.getURL("blocked.html");
-    const redirectUrl = `${blockedPage}?url=${encodeURIComponent(details.url)}`;
+    const redirectUrl =
+      blockedEntry.redirectUrl ||
+      `${blockedPage}?url=${encodeURIComponent(details.url)}`;
     chrome.tabs.update(details.tabId, { url: redirectUrl });
   }
 });

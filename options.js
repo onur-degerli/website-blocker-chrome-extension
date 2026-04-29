@@ -2,12 +2,33 @@ const STORAGE_KEY = "blockedSites";
 
 const form = document.getElementById("site-form");
 const input = document.getElementById("site-input");
+const redirectInput = document.getElementById("redirect-input");
 const message = document.getElementById("message");
 const blockedList = document.getElementById("blocked-list");
 
+function normalizeRedirectUrl(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const candidate = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+
+  try {
+    const url = new URL(candidate);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeStoredEntry(value) {
   if (typeof value === "string") {
-    return { host: value, enabled: true };
+    return { host: value, enabled: true, redirectUrl: "" };
   }
 
   if (
@@ -16,7 +37,11 @@ function normalizeStoredEntry(value) {
     typeof value.host === "string" &&
     typeof value.enabled === "boolean"
   ) {
-    return { host: value.host, enabled: value.enabled };
+    return {
+      host: value.host,
+      enabled: value.enabled,
+      redirectUrl: normalizeRedirectUrl(value.redirectUrl) || ""
+    };
   }
 
   return null;
@@ -50,7 +75,7 @@ async function normalizeHostname(value) {
   return response?.hostname || null;
 }
 
-function createListItem(entry, onToggle, onRemove) {
+function createListItem(entry, onToggle, onRemove, onRedirectChange) {
   const li = document.createElement("li");
   const siteMeta = document.createElement("div");
   siteMeta.className = "site-meta";
@@ -63,7 +88,16 @@ function createListItem(entry, onToggle, onRemove) {
   statusLabel.className = "site-status";
   statusLabel.textContent = entry.enabled ? "Blocking ON" : "Blocking OFF";
 
-  siteMeta.append(siteLabel, statusLabel);
+  const redirectField = document.createElement("input");
+  redirectField.type = "text";
+  redirectField.className = "redirect-input";
+  redirectField.placeholder = "Redirect URL (optional)";
+  redirectField.value = entry.redirectUrl;
+  redirectField.addEventListener("change", () =>
+    onRedirectChange(entry.host, redirectField.value)
+  );
+
+  siteMeta.append(siteLabel, statusLabel, redirectField);
 
   const actions = document.createElement("div");
   actions.className = "site-actions";
@@ -98,7 +132,7 @@ async function renderSites() {
 
   const sorted = [...sites].sort((a, b) => a.host.localeCompare(b.host));
   sorted.forEach((entry) => {
-    const item = createListItem(entry, toggleSite, removeSite);
+    const item = createListItem(entry, toggleSite, removeSite, updateRedirect);
     blockedList.appendChild(item);
   });
 }
@@ -112,15 +146,22 @@ async function addSite(event) {
     return;
   }
 
+  const redirectUrl = normalizeRedirectUrl(redirectInput.value);
+  if (redirectUrl === null) {
+    showMessage("Please enter a valid redirect URL or leave it empty.", true);
+    return;
+  }
+
   const sites = await getBlockedSites();
   if (sites.some((entry) => entry.host === normalized)) {
     showMessage("This website is already blocked.", true);
     return;
   }
 
-  const updated = [...sites, { host: normalized, enabled: true }];
+  const updated = [...sites, { host: normalized, enabled: true, redirectUrl }];
   await setBlockedSites(updated);
   input.value = "";
+  redirectInput.value = "";
   showMessage(`${normalized} added to blocked websites.`);
   await renderSites();
 }
@@ -147,6 +188,31 @@ async function toggleSite(site) {
   const changed = updated.find((entry) => entry.host === site);
   showMessage(
     changed?.enabled ? `${site} blocking enabled.` : `${site} blocking disabled.`
+  );
+  await renderSites();
+}
+
+async function updateRedirect(site, value) {
+  const redirectUrl = normalizeRedirectUrl(value);
+  if (redirectUrl === null) {
+    showMessage("Please enter a valid redirect URL or leave it empty.", true);
+    return;
+  }
+
+  const sites = await getBlockedSites();
+  const updated = sites.map((entry) => {
+    if (entry.host !== site) {
+      return entry;
+    }
+
+    return { ...entry, redirectUrl };
+  });
+
+  await setBlockedSites(updated);
+  showMessage(
+    redirectUrl
+      ? `${site} will redirect to ${redirectUrl}.`
+      : `${site} will show the block page.`
   );
   await renderSites();
 }
