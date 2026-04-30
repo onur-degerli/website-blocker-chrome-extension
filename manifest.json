@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Website Blocker",
-  "description": "Block websites that you manually add in extension settings.",
+  "name": "Zengate",
+  "description": "Block distracting websites instantly and optionally redirect yourself to a productive page. Stay focused, on your terms.",
   "version": "1.0.0",
   "permissions": [
     "storage",
@@ -22,7 +22,7 @@
   },
   "options_page": "options.html",
   "action": {
-    "default_title": "Website Blocker",
+    "default_title": "Zengate",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
