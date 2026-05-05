@@ -1,11 +1,24 @@
 const STORAGE_KEY = "blockedSites";
+const TIMER_STORAGE_KEY = "pomodoroTimer";
+const TIMER_DURATIONS = {
+  focus: 25 * 60,
+  break: 5 * 60
+};
 
 const currentSiteEl = document.getElementById("current-site");
 const questionEl = document.getElementById("question");
 const statusEl = document.getElementById("status");
 const addButton = document.getElementById("add-button");
+const timerDisplayEl = document.getElementById("timer-display");
+const timerModeEl = document.getElementById("timer-mode");
+const focusButton = document.getElementById("focus-button");
+const breakButton = document.getElementById("break-button");
+const timerToggleButton = document.getElementById("timer-toggle");
+const timerResetButton = document.getElementById("timer-reset");
 
 let currentHost = null;
+let timerState = createDefaultTimerState("focus");
+let timerInterval = null;
 
 function normalizeStoredEntry(value) {
   if (typeof value === "string") {
@@ -59,6 +72,149 @@ async function getCurrentTab() {
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
   statusEl.style.color = isError ? "#b42318" : "#1b6f3f";
+}
+
+function createDefaultTimerState(mode) {
+  const duration = TIMER_DURATIONS[mode] || TIMER_DURATIONS.focus;
+  return {
+    mode,
+    duration,
+    remaining: duration,
+    startedAt: null,
+    isRunning: false
+  };
+}
+
+function normalizeTimerState(value) {
+  if (!value || typeof value !== "object") {
+    return createDefaultTimerState("focus");
+  }
+
+  const mode = value.mode === "break" ? "break" : "focus";
+  const duration = TIMER_DURATIONS[mode];
+  const startedAt = typeof value.startedAt === "number" ? value.startedAt : null;
+  const remaining =
+    typeof value.remaining === "number" && value.remaining >= 0
+      ? Math.min(value.remaining, duration)
+      : duration;
+
+  return {
+    mode,
+    duration,
+    remaining,
+    startedAt,
+    isRunning: value.isRunning === true && startedAt !== null
+  };
+}
+
+function getLiveTimerState(state) {
+  if (!state.isRunning || !state.startedAt) {
+    return state;
+  }
+
+  const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+  const remaining = Math.max(0, Math.min(state.duration, state.duration - elapsed));
+  return {
+    ...state,
+    remaining,
+    startedAt: remaining === 0 ? null : state.startedAt,
+    isRunning: remaining > 0
+  };
+}
+
+async function saveTimerState(state) {
+  await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
+}
+
+async function loadTimerState() {
+  const result = await chrome.storage.local.get(TIMER_STORAGE_KEY);
+  timerState = getLiveTimerState(normalizeTimerState(result[TIMER_STORAGE_KEY]));
+  await saveTimerState(timerState);
+  renderTimer();
+}
+
+function formatSeconds(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function renderTimer() {
+  timerDisplayEl.textContent = formatSeconds(timerState.remaining);
+  timerModeEl.textContent = timerState.mode === "break" ? "Break" : "Focus";
+  timerToggleButton.textContent = timerState.isRunning ? "Pause" : "Start";
+  focusButton.classList.toggle("active", timerState.mode === "focus");
+  breakButton.classList.toggle("active", timerState.mode === "break");
+}
+
+function startTimerInterval() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+  }
+
+  timerInterval = setInterval(async () => {
+    timerState = getLiveTimerState(timerState);
+    renderTimer();
+
+    if (!timerState.isRunning) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      await saveTimerState(timerState);
+    }
+  }, 1000);
+}
+
+async function switchTimerMode(mode) {
+  timerState = createDefaultTimerState(mode);
+  await saveTimerState(timerState);
+  renderTimer();
+
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+async function toggleTimer() {
+  timerState = getLiveTimerState(timerState);
+
+  if (timerState.isRunning) {
+    timerState = {
+      ...timerState,
+      startedAt: null,
+      isRunning: false
+    };
+    await saveTimerState(timerState);
+    renderTimer();
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    return;
+  }
+
+  const remaining =
+    timerState.remaining > 0 ? timerState.remaining : timerState.duration;
+  timerState = {
+    ...timerState,
+    remaining,
+    startedAt: Date.now() - (timerState.duration - remaining) * 1000,
+    isRunning: true
+  };
+  await saveTimerState(timerState);
+  renderTimer();
+  startTimerInterval();
+}
+
+async function resetTimer() {
+  timerState = createDefaultTimerState(timerState.mode);
+  await saveTimerState(timerState);
+  renderTimer();
+
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 }
 
 async function refreshView() {
@@ -125,4 +281,14 @@ addButton.addEventListener("click", async () => {
   }
 });
 
+focusButton.addEventListener("click", () => switchTimerMode("focus"));
+breakButton.addEventListener("click", () => switchTimerMode("break"));
+timerToggleButton.addEventListener("click", toggleTimer);
+timerResetButton.addEventListener("click", resetTimer);
+
 refreshView();
+loadTimerState().then(() => {
+  if (timerState.isRunning) {
+    startTimerInterval();
+  }
+});

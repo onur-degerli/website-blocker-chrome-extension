@@ -9,11 +9,29 @@
   <body>
     <main class="popup">
       <h1>Zengate</h1>
-      <p class="label">Current page</p>
-      <p id="current-site" class="site">Loading...</p>
-      <p id="question" class="question">Checking website...</p>
-      <button id="add-button" type="button" disabled>Add to blocked list</button>
-      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <section class="card">
+        <p class="label">Current page</p>
+        <p id="current-site" class="site">Loading...</p>
+        <p id="question" class="question">Checking website...</p>
+        <button id="add-button" type="button" disabled>Add to blocked list</button>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="card timer-card" aria-labelledby="timer-title">
+        <div class="section-heading">
+          <h2 id="timer-title">Pomodoro</h2>
+          <span id="timer-mode" class="timer-mode">Focus</span>
+        </div>
+        <p id="timer-display" class="timer-display" aria-live="polite">25:00</p>
+        <div class="timer-presets" role="group" aria-label="Pomodoro mode">
+          <button id="focus-button" type="button" class="secondary active">Focus</button>
+          <button id="break-button" type="button" class="secondary">Break</button>
+        </div>
+        <div class="timer-actions">
+          <button id="timer-toggle" type="button">Start</button>
+          <button id="timer-reset" type="button" class="secondary">Reset</button>
+        </div>
+      </section>
     </main>
     <script src="popup.js"></script>
   </body>
