@@ -2,8 +2,10 @@
   "manifest_version": 3,
   "name": "Zengate",
   "description": "Block distracting websites instantly and optionally redirect yourself to a productive page. Stay focused, on your terms.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "permissions": [
+    "alarms",
+    "offscreen",
     "storage",
     "tabs",
     "webNavigation"

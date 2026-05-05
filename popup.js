@@ -126,6 +126,13 @@ async function saveTimerState(state) {
   await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
 }
 
+async function syncPomodoroAlarm(state) {
+  await chrome.runtime.sendMessage({
+    type: "pomodoro-timer-updated",
+    state
+  });
+}
+
 async function loadTimerState() {
   const result = await chrome.storage.local.get(TIMER_STORAGE_KEY);
   timerState = getLiveTimerState(normalizeTimerState(result[TIMER_STORAGE_KEY]));
@@ -167,6 +174,7 @@ function startTimerInterval() {
 async function switchTimerMode(mode) {
   timerState = createDefaultTimerState(mode);
   await saveTimerState(timerState);
+  await syncPomodoroAlarm(timerState);
   renderTimer();
 
   if (timerInterval) {
@@ -185,6 +193,7 @@ async function toggleTimer() {
       isRunning: false
     };
     await saveTimerState(timerState);
+    await syncPomodoroAlarm(timerState);
     renderTimer();
     if (timerInterval) {
       clearInterval(timerInterval);
@@ -202,6 +211,7 @@ async function toggleTimer() {
     isRunning: true
   };
   await saveTimerState(timerState);
+  await syncPomodoroAlarm(timerState);
   renderTimer();
   startTimerInterval();
 }
@@ -209,6 +219,7 @@ async function toggleTimer() {
 async function resetTimer() {
   timerState = createDefaultTimerState(timerState.mode);
   await saveTimerState(timerState);
+  await syncPomodoroAlarm(timerState);
   renderTimer();
 
   if (timerInterval) {
